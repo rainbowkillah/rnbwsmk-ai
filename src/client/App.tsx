@@ -20,20 +20,20 @@ export default function App() {
         <ChatWindow roomId="default" />
 
         <div className="info-card">
-          <h3>✅ Phase 6: Site Integration Complete</h3>
+          <h3>✅ Phase 7: Advanced Features Complete</h3>
           <ul>
-            <li>Floating chat widget on rainbowsmokeofficial.com</li>
-            <li>Full-page /chat route with iframe embed</li>
-            <li>API proxy endpoints for seamless communication</li>
-            <li>Service binding between main site and AI worker</li>
-            <li>Mobile-responsive design with smooth animations</li>
+            <li>Calendar scheduling with event management (WebSocket API)</li>
+            <li>Enhanced semantic search with recommendations</li>
+            <li>Browser rendering for web crawling and scraping</li>
+            <li>React search components with real-time results</li>
+            <li>3 new services: CalendarService, SearchService, BrowserService</li>
           </ul>
 
           <h3>✅ Previous Features:</h3>
           <ul>
+            <li>Site integration with floating chat widget</li>
             <li>Retrieval-augmented generation with vector knowledge base</li>
             <li>Context-aware AI responses using Vectorize search</li>
-            <li>Real-time context display showing relevant sources</li>
             <li>Real AI responses with Workers AI (Llama 3.3-70b)</li>
             <li>Streaming responses with live updates</li>
             <li>Multi-model support (free Llama + premium GPT-4o/Claude)</li>

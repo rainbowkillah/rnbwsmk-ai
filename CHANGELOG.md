@@ -9,12 +9,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Planned Features
 
-#### Phase 7: Advanced Features
-- Calendar scheduling API
-- Browser rendering for site crawling
-- Search UI components
-- Recommendations
-
 #### Phase 8: Polish & Optimization
 - Rate limiting service
 - Caching layers
@@ -34,6 +28,206 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - User analytics dashboard
 - Mobile app (React Native)
 - Multi-language support
+
+---
+
+## [0.7.0] - 2025-12-04
+
+### Added - Phase 7: Advanced Features (Calendar, Search, Browser Rendering)
+
+#### CalendarService - Event Scheduling (389 lines)
+- **`src/server/services/CalendarService.ts`** - Complete calendar management
+  - `createEvent()` - Create events with validation (no past events, start < end)
+  - `getEvent()` - Retrieve single event by ID
+  - `getEvents()` - Query events with filters (date range, createdByAI flag)
+  - `getUpcomingEvents()` - Get future events sorted by start time
+  - `updateEvent()` - Update event fields
+  - `deleteEvent()` - Remove events
+  - `hasConflict()` - Check for scheduling conflicts
+  - `getStats()` - Calendar statistics (total, upcoming, AI-created)
+
+- **Database Schema** - SQL tables in Durable Objects
+  - `calendar_events` table with indexes on user_id and time ranges
+  - Fields: id, user_id, title, description, start_time, end_time, location, attendees, created_by_ai, metadata
+  - Indexes: `idx_events_user_time`, `idx_events_time_range`
+
+- **UserSession Integration** - WebSocket API for calendar
+  - Updated `src/server/durable-objects/UserSession.ts` (98 lines)
+  - WebSocket message types: calendar.create, calendar.get, calendar.list, calendar.upcoming, calendar.update, calendar.delete, calendar.stats
+  - Route: `/party/calendar/:userId` for WebSocket connections
+
+#### SearchService - Semantic Search (236 lines)
+- **`src/server/services/SearchService.ts`** - Enhanced search with VectorizeService
+  - `search()` - Full semantic search with filters (type, category, minScore, indexes)
+  - `searchByType()` - Search specific content types
+  - `getRecommendations()` - Get recommendations (min 65% relevance)
+  - `findSimilar()` - Find similar content to given text
+  - `searchWithFacets()` - Grouped results by type
+  - `generateHighlight()` - Context-aware text highlights
+  - `getPopularSearches()` - Placeholder for analytics
+
+- **Search API** - POST `/api/search`
+  - Request: `{ query, filters?, limit?, includeMetadata? }`
+  - Response: `{ query, results[], total, took }`
+  - Results include: id, text, score, type, category, url, metadata, highlight
+
+- **Recommendations API** - POST `/api/recommendations`
+  - Request: `{ query, limit? }`
+  - Response: `{ success, query, recommendations[] }`
+  - Higher relevance threshold (65%) for quality recommendations
+
+#### BrowserService - Web Crawling (279 lines)
+- **`src/server/services/BrowserService.ts`** - Cloudflare Browser Rendering integration
+  - `crawlWebsite()` - Full page crawl with options
+    - Options: waitFor selector, screenshot, extractLinks, timeout, userAgent
+    - Returns: url, title, text, html, links, screenshot, metadata
+  - `extractStructuredData()` - Extract JSON-LD, Open Graph, meta tags
+  - `checkUrl()` - Verify URL accessibility and status code
+  - `getPagePreview()` - Get title, description, image, favicon
+  - `crawlMultiple()` - Parallel crawling (max 3 concurrent)
+
+- **Browser Crawl API** - POST `/api/crawl`
+  - Request: `{ url, options? }`
+  - Response: `{ success, result: CrawlResult }`
+  - Use cases: Site scraping, link validation, preview generation
+
+#### React Search Components
+- **`src/client/components/Search/SearchBar.tsx`** (58 lines)
+  - Search input with clear button
+  - Submit handler with loading state
+  - Keyboard shortcuts support
+
+- **`src/client/components/Search/SearchResults.tsx`** (85 lines)
+  - Result list with relevance scores
+  - Type and category badges
+  - Highlighted snippets
+  - Loading and empty states
+
+- **`src/client/styles/search.css`** (217 lines)
+  - Complete search UI styling
+  - Responsive design
+  - Animations (spin, hover effects)
+  - Mobile-optimized
+
+#### API Endpoints Summary
+
+**Calendar API** (WebSocket):
+```
+WS /party/calendar/:userId
+Messages: calendar.{create, get, list, upcoming, update, delete, stats}
+```
+
+**Search APIs** (HTTP):
+```
+POST /api/search
+POST /api/recommendations
+POST /api/crawl
+```
+
+#### Technical Details
+
+**Calendar Features:**
+- Event validation (no past events, valid time ranges)
+- Conflict detection
+- AI-created event tracking
+- Attendee management
+- Custom metadata support
+
+**Search Features:**
+- Multi-index semantic search (profile, content, products)
+- Configurable relevance thresholds
+- Type/category filtering
+- Context-aware highlighting
+- Faceted results
+
+**Browser Rendering:**
+- Cloudflare Puppeteer integration
+- Screenshot capture (base64)
+- Link extraction
+- Structured data parsing
+- Parallel crawling with concurrency limits
+
+#### Files Created
+
+**Services:**
+1. `src/server/services/CalendarService.ts` (389 lines)
+2. `src/server/services/SearchService.ts` (236 lines)
+3. `src/server/services/BrowserService.ts` (279 lines)
+
+**Components:**
+4. `src/client/components/Search/SearchBar.tsx` (58 lines)
+5. `src/client/components/Search/SearchResults.tsx` (85 lines)
+6. `src/client/styles/search.css` (217 lines)
+
+**Modified:**
+7. `src/server/durable-objects/UserSession.ts` - Calendar integration (98 lines)
+8. `src/server/index.ts` - Added 4 new API routes
+
+**Total Lines Added**: ~1,362 lines of functional code
+
+#### Testing
+
+**Calendar API:**
+```javascript
+// Connect via WebSocket
+const ws = new WebSocket('wss://rnbwsmk-ai.../party/calendar/default');
+
+// Create event
+ws.send(JSON.stringify({
+  type: 'calendar.create',
+  event: {
+    title: 'Streaming Session',
+    description: 'Apex Legends gameplay',
+    startTime: Date.now() + 3600000,
+    endTime: Date.now() + 7200000,
+    createdByAI: true
+  }
+}));
+
+// Get upcoming events
+ws.send(JSON.stringify({ type: 'calendar.upcoming', limit: 5 }));
+```
+
+**Search API:**
+```bash
+# Semantic search
+curl -X POST https://rnbwsmk-ai.../api/search \
+  -d '{"query": "gaming setup", "limit": 5}'
+
+# Recommendations
+curl -X POST https://rnbwsmk-ai.../api/recommendations \
+  -d '{"query": "streaming equipment", "limit": 3}'
+
+# Crawl website
+curl -X POST https://rnbwsmk-ai.../api/crawl \
+  -d '{"url": "https://example.com", "options": {"screenshot": true}}'
+```
+
+#### Use Cases
+
+**Calendar:**
+- AI schedules streaming sessions based on user requests
+- Track upcoming events and send reminders
+- Manage collaborations and appointments
+
+**Search:**
+- Enhanced knowledge base search
+- Content recommendations
+- Similar content discovery
+
+**Browser Rendering:**
+- Scrape website content for vectorization
+- Validate external links
+- Generate page previews
+
+#### Next Steps
+
+Phase 7 complete! Advanced features implemented. Ready for Phase 8: Polish & Optimization:
+- Rate limiting service
+- Caching layers
+- Error handling improvements
+- Performance optimization
+- Comprehensive testing
 
 ---
 

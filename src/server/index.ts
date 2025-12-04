@@ -36,7 +36,7 @@ export default {
       return Response.json({
         status: 'healthy',
         timestamp: new Date().toISOString(),
-        version: '0.6.0'
+        version: '0.7.0'
       });
     }
 
@@ -44,7 +44,7 @@ export default {
     if (path === '/api/status') {
       return Response.json({
         service: 'rnbwsmk-ai',
-        version: '0.6.0',
+        version: '0.7.0',
         features: {
           chat: 'enabled',
           vectorize: 'enabled',
@@ -143,12 +143,92 @@ export default {
       }
     }
 
+    // Calendar routes (Phase 7) - WebSocket via UserSession DO
+    if (path.startsWith('/party/calendar/')) {
+      const userId = path.split('/').pop() || 'default';
+      const durableObjectId = env.USER_SESSION.idFromName(userId);
+      const durableObject = env.USER_SESSION.get(durableObjectId);
+      return durableObject.fetch(request);
+    }
+
+    // Search API (Phase 7)
+    if (path === '/api/search' && request.method === 'POST') {
+      try {
+        const { SearchService } = await import('./services/SearchService');
+        const vectorService = new VectorizeService(
+          env.AI,
+          env.VECTORIZE_PROFILE,
+          env.VECTORIZE_CONTENT,
+          env.VECTORIZE_PRODUCTS,
+          env.EMBEDDING_MODEL
+        );
+        const searchService = new SearchService(vectorService);
+
+        const query = await request.json() as any;
+        const results = await searchService.search(query);
+
+        return Response.json(results);
+      } catch (error) {
+        return Response.json({
+          error: (error as Error).message
+        }, { status: 500 });
+      }
+    }
+
+    // Recommendations API (Phase 7)
+    if (path === '/api/recommendations' && request.method === 'POST') {
+      try {
+        const { SearchService } = await import('./services/SearchService');
+        const vectorService = new VectorizeService(
+          env.AI,
+          env.VECTORIZE_PROFILE,
+          env.VECTORIZE_CONTENT,
+          env.VECTORIZE_PRODUCTS,
+          env.EMBEDDING_MODEL
+        );
+        const searchService = new SearchService(vectorService);
+
+        const { query, limit = 5 } = await request.json() as any;
+        const recommendations = await searchService.getRecommendations(query, limit);
+
+        return Response.json({
+          success: true,
+          query,
+          recommendations
+        });
+      } catch (error) {
+        return Response.json({
+          error: (error as Error).message
+        }, { status: 500 });
+      }
+    }
+
+    // Browser crawl API (Phase 7)
+    if (path === '/api/crawl' && request.method === 'POST') {
+      try {
+        const { BrowserService } = await import('./services/BrowserService');
+        const browserService = new BrowserService(env.BROWSER);
+
+        const { url, options } = await request.json() as any;
+        const result = await browserService.crawlWebsite(url, options);
+
+        return Response.json({
+          success: true,
+          result
+        });
+      } catch (error) {
+        return Response.json({
+          error: (error as Error).message
+        }, { status: 500 });
+      }
+    }
+
     // Other API routes (will be implemented in future phases)
     if (path.startsWith('/api/')) {
       return Response.json({
         error: 'Not implemented yet',
         path,
-        phase: 'Coming in Phase 5+'
+        phase: 'Coming in Phase 8+'
       }, { status: 501 });
     }
 

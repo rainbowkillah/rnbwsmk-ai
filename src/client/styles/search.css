@@ -1,0 +1,236 @@
+/**
+ * Search Component Styles
+ * Phase 7: Advanced Features
+ */
+
+/* Search Bar */
+.search-bar {
+  display: flex;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-lg);
+}
+
+.search-input-wrapper {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-icon {
+  position: absolute;
+  left: 1rem;
+  font-size: 1.2rem;
+  color: var(--color-text-muted);
+  pointer-events: none;
+}
+
+.search-input {
+  width: 100%;
+  padding: 0.75rem 3rem 0.75rem 3rem;
+  background: var(--color-surface);
+  border: 2px solid transparent;
+  border-radius: var(--border-radius);
+  color: var(--color-text);
+  font-size: 1rem;
+  transition: all 0.2s;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.search-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.search-clear {
+  position: absolute;
+  right: 1rem;
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+
+.search-clear:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--color-text);
+}
+
+.search-submit {
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+  border: none;
+  border-radius: var(--border-radius);
+  color: white;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.search-submit:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.search-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Search Results */
+.search-results {
+  margin-top: var(--spacing-lg);
+}
+
+.search-header {
+  margin-bottom: var(--spacing-md);
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+}
+
+.search-loading,
+.search-empty {
+  text-align: center;
+  padding: var(--spacing-lg);
+  color: var(--color-text-muted);
+}
+
+.search-loading .loading-spinner {
+  font-size: 3rem;
+  display: block;
+  margin-bottom: var(--spacing-md);
+  animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.search-empty .empty-icon {
+  font-size: 4rem;
+  display: block;
+  margin-bottom: var(--spacing-md);
+  opacity: 0.3;
+}
+
+.empty-hint {
+  font-size: 0.9rem;
+  margin-top: var(--spacing-sm);
+}
+
+/* Result Items */
+.results-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.result-item {
+  background: var(--color-surface);
+  border-radius: var(--border-radius);
+  padding: var(--spacing-md);
+  border: 2px solid transparent;
+  transition: all 0.2s;
+}
+
+.result-item:hover {
+  border-color: var(--color-primary);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.result-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-sm);
+}
+
+.result-type,
+.result-category {
+  padding: 0.25rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.result-type {
+  background: rgba(102, 126, 234, 0.2);
+  color: var(--color-primary);
+}
+
+.result-category {
+  background: rgba(118, 75, 162, 0.2);
+  color: var(--color-secondary);
+}
+
+.result-score {
+  margin-left: auto;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+
+.result-content {
+  margin: var(--spacing-sm) 0;
+}
+
+.result-highlight,
+.result-text {
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: var(--color-text);
+}
+
+.result-highlight {
+  background: rgba(102, 126, 234, 0.05);
+  padding: var(--spacing-sm);
+  border-radius: 6px;
+}
+
+.result-footer {
+  margin-top: var(--spacing-sm);
+  padding-top: var(--spacing-sm);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.result-link {
+  color: var(--color-primary);
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+
+.result-link:hover {
+  color: var(--color-secondary);
+  text-decoration: underline;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .search-bar {
+    flex-direction: column;
+  }
+
+  .search-submit {
+    width: 100%;
+  }
+}
