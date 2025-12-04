@@ -9,12 +9,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Planned Features
 
-#### Phase 3: AI Integration
-- AIService with Workers AI (Llama 3.3)
-- Streaming response handling
-- AI Gateway configuration
-- Multi-model support (Llama, GPT-4o, Claude)
-
 #### Phase 4: Vectorize Setup
 - Three Vectorize indexes (profile, content, products)
 - VectorizeService implementation
@@ -58,6 +52,100 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - User analytics dashboard
 - Mobile app (React Native)
 - Multi-language support
+
+---
+
+## [0.3.0] - 2025-12-04
+
+### Added - Phase 3: AI Integration
+
+#### AIService Implementation
+- **Multi-Model Orchestration**: Created AIService class with support for both Workers AI and AI Gateway
+  - Free tier: Llama 3.3-70b (Workers AI native)
+  - Premium tier: GPT-4o, Claude Sonnet 4.5 (via AI Gateway)
+  - Automatic model selection based on query complexity
+  - Configurable temperature, max tokens, and caching
+- **Streaming Support**: Full Server-Sent Events (SSE) streaming from both Workers AI and AI Gateway
+  - Real-time token-by-token responses
+  - Proper error handling and stream cleanup
+  - Transform streams to unified format
+
+#### Real AI Responses
+- **Integrated Workers AI (Llama 3.3-70b)**: Replaced echo responses with real AI
+  - Context-aware responses using conversation history
+  - Intelligent model selection (free vs premium based on complexity)
+  - AI Gateway integration for caching (TTL: 3600s) and rate limiting
+- **Streaming Response Handling** in AIChatRoom:
+  - Stream chunks broadcast to all WebSocket sessions in real-time
+  - Progressive content accumulation
+  - Complete message saved to SQL after streaming finishes
+  - Error recovery with graceful fallbacks
+
+#### React UI Updates
+- **ChatWindow** streaming support:
+  - State management for streaming messages
+  - Handles `message.stream` events to accumulate content
+  - Handles `message.complete` events to finalize
+  - Separate state for in-progress vs completed messages
+- **MessageList** streaming display:
+  - Shows streaming messages with blinking cursor (▊)
+  - Auto-scrolls as content arrives
+  - Smooth animations for streaming text
+- **Streaming Cursor Animation**:
+  - CSS keyframe animation (1s blink cycle)
+  - Visual feedback that AI is actively responding
+  - Purple gradient color matching theme
+
+#### Context Awareness
+- **Conversation History**: Added getConversationHistory method
+  - Fetches last 10 messages for context
+  - Chronological order for AI input
+  - Includes role, content, and metadata
+- **saveAndBroadcastMessage**: Helper for message persistence
+  - Saves complete AI responses to SQL
+  - Broadcasts to all connected sessions
+  - Tracks model used and metadata
+
+### Technical Details
+
+#### Streaming Architecture
+```
+User Message → AIChatRoom → AIService.chat()
+                                 ↓
+                   Workers AI / AI Gateway (streaming)
+                                 ↓
+                         Stream chunks
+                                 ↓
+                   Broadcast to all WebSocket clients
+                                 ↓
+                React accumulates & displays with cursor
+                                 ↓
+                   Stream complete → Save to SQL
+```
+
+#### Model Selection Logic
+- Query length > 500 chars → Premium
+- Keywords (analyze, write code, generate, etc.) → Premium
+- Simple Q&A, short queries → Free (Llama 3.3)
+- Explicit model parameter → Use specified
+
+#### AI Gateway Configuration
+- Cache TTL: 3600 seconds (1 hour)
+- Supports OpenAI and Anthropic providers
+- Automatic provider detection from model string
+- Custom headers for cache control
+
+### Changed
+- Updated [AIChatRoom.ts](src/server/durable-objects/AIChatRoom.ts:1-481) to use AI Service
+- Modified [ChatWindow.tsx](src/client/components/Chat/ChatWindow.tsx:16-62) for streaming state
+- Enhanced [MessageList.tsx](src/client/components/Chat/MessageList.tsx:14-83) with streaming message display
+- Updated [App.tsx](src/client/App.tsx:1-43) info card to reflect Phase 3 completion
+
+### Notes
+- AI responses now use real Workers AI (Llama 3.3) - may incur usage charges
+- Premium models (GPT-4o/Claude) require API keys via AI Gateway
+- Streaming provides excellent UX with instant feedback
+- Ready for Phase 4: Vectorize Setup for knowledge base
 
 ---
 

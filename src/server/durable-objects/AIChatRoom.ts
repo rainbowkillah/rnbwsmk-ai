@@ -2,10 +2,11 @@
  * AIChatRoom Durable Object
  * Handles real-time chat with message persistence using native WebSockets
  * Phase 2: WebSocket chat with SQL storage
- * Phase 3+: AI integration and RAG
+ * Phase 3: AI integration with streaming
  */
 
 import { nanoid } from 'nanoid';
+import { AIService } from '../services/AIService';
 import type { ChatMessage, WSMessageType } from '../../shared/types';
 
 interface WebSocketSession {
@@ -18,11 +19,15 @@ export class AIChatRoom implements DurableObject {
   private env: Env;
   private sessions: Set<WebSocketSession>;
   private sql!: SqlStorage;
+  private aiService: AIService;
 
   constructor(state: DurableObjectState, env: Env) {
     this.state = state;
     this.env = env;
     this.sessions = new Set();
+
+    // Initialize AI service
+    this.aiService = new AIService(env.AI, env.AI_GATEWAY_ID);
 
     // Block all CORS requests for now (we'll enable later for production)
     this.state.blockConcurrencyWhile(async () => {
@@ -267,9 +272,8 @@ export class AIChatRoom implements DurableObject {
       message: userMessage
     } satisfies WSMessageType));
 
-    // Phase 3: AI response will be added here
-    // For now, send a simple echo response
-    await this.sendEchoResponse(conversationId, userMessage);
+    // Generate AI response with streaming
+    await this.sendAIResponse(conversationId, data);
   }
 
   /**
@@ -329,41 +333,138 @@ export class AIChatRoom implements DurableObject {
   }
 
   /**
-   * Temporary echo response (Phase 2)
-   * Will be replaced with AI response in Phase 3
+   * Generate AI response with streaming (Phase 3)
    */
-  private async sendEchoResponse(conversationId: string, userMessage: ChatMessage) {
+  private async sendAIResponse(
+    conversationId: string,
+    requestData: WSMessageType & { type: 'message.new' }
+  ) {
     const responseId = nanoid();
     const now = Date.now();
 
-    // Create assistant message
-    const assistantMessage: ChatMessage = {
-      id: responseId,
-      role: 'assistant',
-      content: `Echo: ${userMessage.content} (AI integration coming in Phase 3!)`,
-      timestamp: now,
-      metadata: {
-        isEcho: true
+    try {
+      // Get conversation history for context
+      const history = this.getConversationHistory(conversationId);
+
+      // Generate AI response with streaming
+      const stream = await this.aiService.chat(history, {
+        model: requestData.model,
+        usePremium: requestData.usePremium,
+        stream: true,
+        temperature: 0.7,
+        maxTokens: 1024,
+        gateway: {
+          id: this.env.AI_GATEWAY_ID,
+          cacheTtl: 3600
+        }
+      });
+
+      if (typeof stream === 'string') {
+        // Non-streaming response (shouldn't happen, but handle it)
+        await this.saveAndBroadcastMessage(conversationId, responseId, stream, now);
+        return;
       }
+
+      // Stream the response
+      const reader = stream.getReader();
+      let fullContent = '';
+
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+
+          if (done || value.done) {
+            // Save complete message to database
+            await this.saveAndBroadcastMessage(conversationId, responseId, fullContent, now);
+            break;
+          }
+
+          // Accumulate content
+          fullContent += value.content;
+
+          // Broadcast stream chunk to all sessions
+          this.broadcast(JSON.stringify({
+            type: 'message.stream',
+            id: responseId,
+            content: value.content
+          } satisfies WSMessageType));
+        }
+      } finally {
+        reader.releaseLock();
+      }
+    } catch (error) {
+      console.error('AI response error:', error);
+
+      // Send error message
+      const errorMessage = `Sorry, I encountered an error: ${(error as Error).message}`;
+      await this.saveAndBroadcastMessage(conversationId, responseId, errorMessage, now, {
+        error: true
+      });
+    }
+  }
+
+  /**
+   * Save message to database and broadcast to all sessions
+   */
+  private async saveAndBroadcastMessage(
+    conversationId: string,
+    messageId: string,
+    content: string,
+    timestamp: number,
+    metadata: Record<string, any> = {}
+  ) {
+    const assistantMessage: ChatMessage = {
+      id: messageId,
+      role: 'assistant',
+      content,
+      timestamp,
+      model: this.env.DEFAULT_MODEL,
+      metadata
     };
 
     // Save to database
     this.sql.exec(
-      `INSERT INTO messages (id, conversation_id, role, content, created_at, metadata)
-       VALUES (?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO messages (id, conversation_id, role, content, model, created_at, metadata)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
       assistantMessage.id,
       conversationId,
       assistantMessage.role,
       assistantMessage.content,
+      assistantMessage.model,
       assistantMessage.timestamp,
       JSON.stringify(assistantMessage.metadata || {})
     );
 
-    // Broadcast assistant message
+    // Broadcast complete message
     this.broadcast(JSON.stringify({
-      type: 'message.add',
+      type: 'message.complete',
       message: assistantMessage
     } satisfies WSMessageType));
+  }
+
+  /**
+   * Get conversation history for AI context
+   */
+  private getConversationHistory(conversationId: string, limit: number = 10): ChatMessage[] {
+    const rows = this.sql.exec(
+      `SELECT id, role, content, model, tokens_used, created_at, metadata
+       FROM messages
+       WHERE conversation_id = ?
+       ORDER BY created_at DESC
+       LIMIT ?`,
+      conversationId,
+      limit
+    ).toArray();
+
+    // Reverse to get chronological order
+    return rows.reverse().map((row: any) => ({
+      id: row.id,
+      role: row.role,
+      content: row.content,
+      model: row.model,
+      timestamp: row.created_at,
+      metadata: row.metadata ? JSON.parse(row.metadata) : {}
+    }));
   }
 
   /**

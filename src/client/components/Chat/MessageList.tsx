@@ -8,15 +8,16 @@ import type { ChatMessage } from '../../../shared/types';
 
 interface MessageListProps {
   messages: ChatMessage[];
+  streamingMessage?: ChatMessage | null;
 }
 
-export default function MessageList({ messages }: MessageListProps) {
+export default function MessageList({ messages, streamingMessage }: MessageListProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to bottom when new messages arrive
+  // Auto-scroll to bottom when new messages or streaming content arrives
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages, streamingMessage]);
 
   const formatTimestamp = (timestamp?: number) => {
     if (!timestamp) return '';
@@ -59,6 +60,23 @@ export default function MessageList({ messages }: MessageListProps) {
           </div>
         ))
       )}
+
+      {/* Streaming message (AI is typing) */}
+      {streamingMessage && (
+        <div className="message message-assistant message-streaming">
+          <div className="message-header">
+            <span className="message-role">🤖 Assistant</span>
+            <span className="message-timestamp">
+              {formatTimestamp(streamingMessage.timestamp)}
+            </span>
+          </div>
+          <div className="message-content">
+            {streamingMessage.content}
+            <span className="streaming-cursor">▊</span>
+          </div>
+        </div>
+      )}
+
       <div ref={messagesEndRef} />
     </div>
   );
