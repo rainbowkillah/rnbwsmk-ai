@@ -1,0 +1,40 @@
+{
+  "name": "rnbwsmk-ai",
+  "version": "0.1.0",
+  "description": "AI assistant for rainbowsmokeofficial.com",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build:client": "esbuild src/client/index.tsx --bundle --splitting --format=esm --platform=browser --outdir=public/dist --loader:.svg=file --loader:.png=file",
+    "cf-typegen": "wrangler types ./src/server/worker-configuration.d.ts",
+    "check": "tsc --noEmit && wrangler deploy --dry-run",
+    "dev": "wrangler dev",
+    "dev:remote": "wrangler dev --remote",
+    "deploy": "npm run build:client && wrangler deploy",
+    "deploy:staging": "npm run build:client && wrangler deploy --env staging",
+    "setup:vectorize": "bash scripts/create-indexes.sh",
+    "seed": "wrangler dev --test-scheduled --x-local-protocol https",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@cloudflare/ai": "^1.0.0",
+    "@cloudflare/puppeteer": "^0.0.9",
+    "nanoid": "^5.1.6",
+    "partyserver": "^0.0.75",
+    "partysocket": "^1.1.6",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router": "^7.9.6"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "^0.10.11",
+    "@cloudflare/workers-types": "^4.20241127.0",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "esbuild": "^0.27.0",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4",
+    "wrangler": "^4.52.1"
+  }
+}

@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Build outputs
+dist/
+public/dist/
+.wrangler/
+
+# Environment files
+.env
+.dev.vars
+
+# TypeScript
+*.tsbuildinfo
+src/server/worker-configuration.d.ts
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Testing
+coverage/
+
+# Temporary files
+*.tmp
+.cache/

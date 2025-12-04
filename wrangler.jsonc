@@ -1,0 +1,95 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "rnbwsmk-ai",
+  "main": "src/server/index.ts",
+  "compatibility_date": "2025-12-04",
+  "compatibility_flags": [
+    "nodejs_compat",
+    "global_fetch_strictly_public"
+  ],
+
+  // Static assets configuration (SPA mode)
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application"
+  },
+
+  // Build configuration for React frontend
+  "build": {
+    "command": "npm run build:client"
+  },
+
+  // Durable Objects configuration
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "AI_CHAT_ROOM",
+        "class_name": "AIChatRoom"
+      },
+      {
+        "name": "USER_SESSION",
+        "class_name": "UserSession"
+      }
+    ]
+  },
+
+  // SQL migrations for Durable Objects
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["AIChatRoom", "UserSession"]
+    }
+  ],
+
+  // Workers AI binding
+  "ai": {
+    "binding": "AI"
+  },
+
+  // Vectorize indexes (must be created separately via wrangler CLI)
+  "vectorize": [
+    {
+      "binding": "VECTORIZE_PROFILE",
+      "index_name": "rnbwsmk-profile-data"
+    },
+    {
+      "binding": "VECTORIZE_CONTENT",
+      "index_name": "rnbwsmk-site-content"
+    },
+    {
+      "binding": "VECTORIZE_PRODUCTS",
+      "index_name": "rnbwsmk-products"
+    }
+  ],
+
+  // Browser Rendering for web scraping/screenshots
+  "browser": {
+    "binding": "BROWSER"
+  },
+
+  // R2 bucket for document storage (must be created separately)
+  "r2_buckets": [
+    {
+      "binding": "DOCUMENTS",
+      "bucket_name": "rnbwsmk-knowledge-base"
+    }
+  ],
+
+  // Environment variables (non-secret)
+  "vars": {
+    "AI_GATEWAY_ID": "rnbwsmk-ai-gateway",
+    "AI_SEARCH_NAME": "rnbwsmk-search",
+    "DEFAULT_MODEL": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+    "PREMIUM_MODEL": "openai/gpt-4o",
+    "EMBEDDING_MODEL": "@cf/baai/bge-base-en-v1.5"
+  },
+
+  // Observability and debugging
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  },
+
+  "upload_source_maps": true
+}
