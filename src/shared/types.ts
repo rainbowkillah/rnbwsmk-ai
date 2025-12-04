@@ -52,7 +52,7 @@ export type WSMessageType =
   | { type: 'message.stream'; id: string; content: string }
   | { type: 'message.complete'; message: ChatMessage }
   | { type: 'message.add'; message: ChatMessage }
-  | { type: 'context.update'; sources: VectorMatch[] }
+  | { type: 'context.update'; messageId: string; sources: Array<{ id: string; score: number; type: string; category: string }> }
   | { type: 'typing.start'; userId: string }
   | { type: 'typing.stop'; userId: string }
   | { type: 'error'; error: string }

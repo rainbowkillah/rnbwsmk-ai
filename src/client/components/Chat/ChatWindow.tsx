@@ -1,6 +1,7 @@
 /**
  * ChatWindow Component
- * Main chat interface container
+ * Main chat interface container with RAG context display
+ * Phase 5: RAG Integration
  */
 
 import React, { useState, useEffect } from 'react';
@@ -13,9 +14,20 @@ interface ChatWindowProps {
   roomId?: string;
 }
 
+interface RAGContext {
+  messageId: string;
+  sources: Array<{
+    id: string;
+    score: number;
+    type: string;
+    category: string;
+  }>;
+}
+
 export default function ChatWindow({ roomId = 'default' }: ChatWindowProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [streamingMessage, setStreamingMessage] = useState<ChatMessage | null>(null);
+  const [ragContext, setRagContext] = useState<RAGContext | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -51,6 +63,14 @@ export default function ChatWindow({ roomId = 'default' }: ChatWindowProps) {
         // Finalize streaming message
         setMessages(prev => [...prev, message.message]);
         setStreamingMessage(null);
+        // Clear RAG context after message is complete
+        setTimeout(() => setRagContext(null), 5000);
+      } else if (message.type === 'context.update') {
+        // Update RAG context
+        setRagContext({
+          messageId: message.messageId,
+          sources: message.sources
+        });
       } else if (message.type === 'error') {
         setError(message.error);
         setTimeout(() => setError(null), 5000);
@@ -90,6 +110,21 @@ export default function ChatWindow({ roomId = 'default' }: ChatWindowProps) {
         <div className="chat-error">
           <span className="error-icon">⚠️</span>
           {error}
+        </div>
+      )}
+
+      {ragContext && ragContext.sources.length > 0 && (
+        <div className="rag-context">
+          <div className="context-header">
+            🔍 Using context from {ragContext.sources.length} source{ragContext.sources.length > 1 ? 's' : ''}
+          </div>
+          <div className="context-sources">
+            {ragContext.sources.slice(0, 3).map((source, index) => (
+              <span key={source.id} className="context-badge">
+                {source.type} ({(source.score * 100).toFixed(0)}%)
+              </span>
+            ))}
+          </div>
         </div>
       )}
 

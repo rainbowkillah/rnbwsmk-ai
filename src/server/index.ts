@@ -36,7 +36,7 @@ export default {
       return Response.json({
         status: 'healthy',
         timestamp: new Date().toISOString(),
-        version: '0.4.0'
+        version: '0.5.0'
       });
     }
 
@@ -44,7 +44,7 @@ export default {
     if (path === '/api/status') {
       return Response.json({
         service: 'rnbwsmk-ai',
-        version: '0.4.0',
+        version: '0.5.0',
         features: {
           chat: 'enabled',
           vectorize: 'enabled',

@@ -3,10 +3,13 @@
  * Handles real-time chat with message persistence using native WebSockets
  * Phase 2: WebSocket chat with SQL storage
  * Phase 3: AI integration with streaming
+ * Phase 5: RAG integration with vector knowledge base
  */
 
 import { nanoid } from 'nanoid';
 import { AIService } from '../services/AIService';
+import { VectorizeService } from '../services/VectorizeService';
+import { RAGService } from '../services/RAGService';
 import type { ChatMessage, WSMessageType } from '../../shared/types';
 
 interface WebSocketSession {
@@ -20,6 +23,8 @@ export class AIChatRoom implements DurableObject {
   private sessions: Set<WebSocketSession>;
   private sql!: SqlStorage;
   private aiService: AIService;
+  private vectorService: VectorizeService;
+  private ragService: RAGService;
 
   constructor(state: DurableObjectState, env: Env) {
     this.state = state;
@@ -28,6 +33,18 @@ export class AIChatRoom implements DurableObject {
 
     // Initialize AI service
     this.aiService = new AIService(env.AI, env.AI_GATEWAY_ID);
+
+    // Initialize Vectorize service
+    this.vectorService = new VectorizeService(
+      env.AI,
+      env.VECTORIZE_PROFILE,
+      env.VECTORIZE_CONTENT,
+      env.VECTORIZE_PRODUCTS,
+      env.EMBEDDING_MODEL
+    );
+
+    // Initialize RAG service
+    this.ragService = new RAGService(this.vectorService, this.aiService);
 
     // Block all CORS requests for now (we'll enable later for production)
     this.state.blockConcurrencyWhile(async () => {
@@ -333,7 +350,7 @@ export class AIChatRoom implements DurableObject {
   }
 
   /**
-   * Generate AI response with streaming (Phase 3)
+   * Generate AI response with streaming and RAG context (Phase 3 + Phase 5)
    */
   private async sendAIResponse(
     conversationId: string,
@@ -346,18 +363,35 @@ export class AIChatRoom implements DurableObject {
       // Get conversation history for context
       const history = this.getConversationHistory(conversationId);
 
-      // Generate AI response with streaming
-      const stream = await this.aiService.chat(history, {
+      // Generate AI response with RAG and streaming
+      const { stream, context } = await this.ragService.chatWithContext(history, {
         model: requestData.model,
         usePremium: requestData.usePremium,
         stream: true,
         temperature: 0.7,
         maxTokens: 1024,
+        enableRAG: true,
+        maxContext: 5,
+        minRelevance: 0.7,
         gateway: {
           id: this.env.AI_GATEWAY_ID,
           cacheTtl: 3600
         }
       });
+
+      // Broadcast context information if available
+      if (context && context.sources.length > 0) {
+        this.broadcast(JSON.stringify({
+          type: 'context.update',
+          messageId: responseId,
+          sources: context.sources.map(s => ({
+            id: s.id,
+            score: s.score,
+            type: s.metadata.type,
+            category: s.metadata.category
+          }))
+        } satisfies WSMessageType));
+      }
 
       if (typeof stream === 'string') {
         // Non-streaming response (shouldn't happen, but handle it)
