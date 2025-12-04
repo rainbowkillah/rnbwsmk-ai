@@ -9,12 +9,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Planned Features
 
-#### Phase 6: Site Integration
-- Service binding with rainbowsmokeofficial.com
-- Floating chat widget
-- Dedicated /chat page
-- API proxy
-
 #### Phase 7: Advanced Features
 - Calendar scheduling API
 - Browser rendering for site crawling
@@ -40,6 +34,179 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - User analytics dashboard
 - Mobile app (React Native)
 - Multi-language support
+
+---
+
+## [0.6.0] - 2025-12-04
+
+### Added - Phase 6: Site Integration with rainbowsmokeofficial.com
+
+#### Main Site Integration Files
+- **`public/js/ai-widget.js`** (330 lines) - Floating chat widget with full features
+  - Auto-initialize with data attributes (`data-ai-widget`, `data-worker-url`, `data-position`)
+  - Configurable positioning (bottom-right, bottom-left, top-right, top-left)
+  - Unread message badges with animations
+  - Toast notifications for new messages when widget is closed
+  - Keyboard shortcuts (Escape to close, Ctrl/Cmd+K to toggle)
+  - PostMessage API for iframe communication
+  - Public API methods: `sendMessage()`, `open()`, `close()`, `toggle()`, `destroy()`
+
+- **`public/css/ai-widget.css`** (450 lines) - Complete widget styling
+  - Rainbow gradient theme matching brand identity
+  - Smooth animations (slideIn, pulse, bounceIn, shake)
+  - Responsive design for mobile and tablet
+  - Dark mode support via media queries
+  - Accessibility features (focus states, reduced motion support)
+  - Print-friendly (hidden in print)
+  - Position variants for all corners
+
+#### Main Site Worker Updates
+- **Service Binding Configuration**
+  - Added `AI_WORKER` service binding in `wrangler.jsonc`
+  - Binds to `rnbwsmk-ai` worker for seamless communication
+
+- **New Routes** (3 routes added to `src/index.js`)
+  - `GET /chat` - Full-page chat interface with iframe embed
+  - `POST /api/ai/chat` - Proxy endpoint for chat requests
+  - `POST /api/ai/search` - Proxy endpoint for semantic search
+  - `GET /api/ai/status` - AI worker health check
+
+- **Layout Integration**
+  - Added `renderAIWidget()` helper function
+  - Widget included on all public pages: Home, About, Gallery, Contact
+  - AI widget CSS added to `headCommon()` function
+  - Widget positioned bottom-right with rainbow gradient theme
+
+#### Features Implemented
+
+**Floating Chat Widget:**
+- ✅ Minimize/maximize with smooth animations
+- ✅ Unread message counter with badge
+- ✅ Toast notifications when widget closed
+- ✅ Keyboard navigation (Escape, Ctrl/Cmd+K)
+- ✅ Mobile responsive (full-screen on small devices)
+- ✅ Iframe sandboxing with proper security
+- ✅ Custom positioning options
+- ✅ Brand-aligned rainbow gradient design
+
+**Full-Page Chat:**
+- ✅ Dedicated `/chat` route with header and back button
+- ✅ Full-screen iframe experience
+- ✅ SEO-optimized page metadata
+
+**API Proxy:**
+- ✅ `/api/ai/chat` - Forward chat requests to AI worker
+- ✅ `/api/ai/search` - Forward search requests to AI worker
+- ✅ `/api/ai/status` - Check AI worker availability
+- ✅ Error handling for service unavailability
+
+#### Technical Details
+
+**Widget Communication:**
+- PostMessage API for secure cross-origin iframe communication
+- Message types: `ai-widget:ready`, `ai-widget:message`, `ai-widget:typing`, `ai-widget:unread`
+- Origin verification for security
+
+**Service Binding:**
+```typescript
+// wrangler.jsonc
+"services": [{
+  "binding": "AI_WORKER",
+  "service": "rnbwsmk-ai",
+  "environment": "production"
+}]
+```
+
+**Widget Initialization:**
+```html
+<!-- Auto-initialize -->
+<div data-ai-widget
+     data-worker-url="https://rnbwsmk-ai.rainbowsmokeofficial.workers.dev"
+     data-position="bottom-right">
+</div>
+<script src="/js/ai-widget.js"></script>
+
+<!-- Manual initialization -->
+<script>
+  window.aiWidget = new AIWidget({
+    workerUrl: 'https://rnbwsmk-ai.rainbowsmokeofficial.workers.dev',
+    position: 'bottom-right',
+    openOnLoad: false,
+    theme: 'rainbow'
+  });
+</script>
+```
+
+**Performance:**
+- Widget CSS: ~12KB minified
+- Widget JS: ~10KB minified
+- Lazy-loaded iframe (only when opened)
+- No impact on main site load time
+
+#### User Experience
+
+**Access Points:**
+1. **Floating Widget** - Available on all public pages (/, /about, /gallery, /contact)
+2. **Full-Page Chat** - Direct link at /chat
+3. **Navigation** - Can be added to main nav (optional)
+
+**Mobile Experience:**
+- Widget button: 56x56px (optimized for touch)
+- Chat window: Full-screen on phones, modal on tablets
+- Smooth transitions and animations
+- Touch-friendly controls
+
+#### Integration Testing
+
+Test the integration:
+1. Visit https://rainbowsmokeofficial.com
+2. Click the floating chat button (bottom-right)
+3. Ask a question to test RAG responses
+4. Check context sources display
+5. Try keyboard shortcuts (Escape to close, Ctrl/Cmd+K to toggle)
+6. Test on mobile devices
+
+#### Files Modified in Main Site
+
+**Configuration:**
+- `wrangler.jsonc` - Added service binding
+
+**Routes & API:**
+- `src/index.js` - Added 3 API routes + /chat page + renderAIWidget() helper
+
+**Assets:**
+- `public/js/ai-widget.js` - New widget script
+- `public/css/ai-widget.css` - New widget styles
+
+#### Architecture
+
+```
+User → rainbowsmokeofficial.com
+      ↓
+      Widget loads in DOM
+      ↓
+      User clicks chat → Widget opens
+      ↓
+      Iframe loads: rnbwsmk-ai.rainbowsmokeofficial.workers.dev
+      ↓
+      User sends message → WebSocket → AIChatRoom
+      ↓
+      RAGService retrieves context → AIService generates response
+      ↓
+      Streaming response → User sees AI reply + context sources
+```
+
+#### Next Steps
+
+Phase 6 is complete! The AI assistant is now fully integrated with the main website. Users can access the chat via:
+- Floating widget on any public page
+- Direct link to /chat page
+- Future: Navigation menu item (optional)
+
+**Remaining Phases:**
+- Phase 7: Advanced Features (Calendar, Search UI, Browser Rendering)
+- Phase 8: Polish & Optimization
+- Phase 9: Production Deployment
 
 ---
 
