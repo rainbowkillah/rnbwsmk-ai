@@ -1,6 +1,6 @@
 {
   "name": "rnbwsmk-ai",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "AI assistant for rainbowsmokeofficial.com",
   "type": "module",
   "private": true,

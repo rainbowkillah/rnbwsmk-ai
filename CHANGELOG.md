@@ -9,12 +9,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Planned Features
 
-#### Phase 2: WebSocket Chat
-- AIChatRoom Durable Object with SQL storage
-- PartyKit WebSocket integration
-- Message persistence
-- React frontend with chat UI
-
 #### Phase 3: AI Integration
 - AIService with Workers AI (Llama 3.3)
 - Streaming response handling
@@ -64,6 +58,85 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - User analytics dashboard
 - Mobile app (React Native)
 - Multi-language support
+
+---
+
+## [0.2.0] - 2025-12-04
+
+### Added - Phase 2: WebSocket Chat
+
+#### Real-time Chat Implementation
+- **Native WebSocket Support**: Implemented Cloudflare Durable Objects WebSocket API
+- **AIChatRoom Durable Object**: Full-featured chat room with SQL persistence
+  - Conversations and messages tables with proper indexing
+  - Session management with connection tracking
+  - Automatic conversation history on connect
+  - Real-time message broadcasting to all connected clients
+- **SQL Storage Schema**:
+  - `conversations` table: Room metadata, timestamps, user information
+  - `messages` table: All chat messages with role, content, timestamps
+  - Indexed queries for optimal performance
+- **Echo Response System**: Temporary assistant responses (AI integration coming in Phase 3)
+
+#### React Chat UI
+- **ChatWindow Component**: Main chat interface with connection status
+  - Real-time connection state indicator (connecting/connected/disconnected)
+  - Error handling and display
+  - WebSocket reconnection support
+- **MessageList Component**: Scrollable message display
+  - Auto-scroll to bottom on new messages
+  - Message role differentiation (user vs assistant)
+  - Timestamp formatting
+  - Empty state handling
+- **MessageInput Component**: Rich message input
+  - Auto-resizing textarea
+  - Keyboard shortcuts (Enter to send, Shift+Enter for new line)
+  - Send button with disabled state
+- **useWebSocket Hook**: Reusable WebSocket connection manager
+  - PartySocket client integration
+  - Automatic connection management
+  - Message handling and state updates
+  - Connection state tracking
+
+#### Styling
+- **Chat UI Styles** ([src/client/styles/chat.css](src/client/styles/chat.css)):
+  - Rainbow gradient theme (purple/blue)
+  - Responsive design for mobile and desktop
+  - Smooth animations for messages
+  - Message bubbles with role-based styling
+  - Connection status indicators with glow effects
+  - Dark mode optimized
+
+#### Testing
+- Verified WebSocket connection establishment
+- Tested message persistence across sessions
+- Confirmed history loading on reconnect
+- Validated SQL schema creation and queries
+
+### Technical Details
+
+#### WebSocket Implementation
+- Uses Cloudflare Workers `WebSocketPair` API
+- Durable Objects accept and manage WebSocket connections
+- Session tracking with unique connection IDs
+- Broadcast system for multi-user support
+
+#### Message Flow
+1. Client connects via WebSocket (`ws://localhost:8787/party/chat/:room_id`)
+2. Server creates session and sends conversation history
+3. User sends message → Saved to SQL → Broadcast to all sessions
+4. Echo response generated and broadcast (temporary until AI integration)
+
+### Changed
+- Updated [App.tsx](src/client/App.tsx) to use ChatWindow component
+- Modified main worker routing to handle WebSocket upgrades
+- Removed PartyServer dependency (using native Durable Objects instead)
+
+### Notes
+- Phase 2 establishes the foundation for Phase 3 (AI Integration)
+- Echo responses are placeholders - real AI streaming coming next
+- WebSocket chat is fully functional with message persistence
+- Ready for AI model integration in Phase 3
 
 ---
 

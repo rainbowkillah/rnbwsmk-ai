@@ -56,7 +56,7 @@ export default {
       });
     }
 
-    // PartyKit WebSocket routes (handled by Durable Objects)
+    // WebSocket chat routes (handled by Durable Objects)
     if (path.startsWith('/party/chat/')) {
       const roomId = path.split('/').pop() || 'default';
       const durableObjectId = env.AI_CHAT_ROOM.idFromName(roomId);

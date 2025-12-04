@@ -1,10 +1,12 @@
 /**
  * Main Application Component
- * Placeholder for Phase 2 implementation
+ * Phase 2: Real-time WebSocket chat
  */
 
 import React from 'react';
+import ChatWindow from './components/Chat/ChatWindow';
 import './styles/main.css';
+import './styles/chat.css';
 
 export default function App() {
   return (
@@ -15,27 +17,21 @@ export default function App() {
       </header>
 
       <main className="main">
-        <div className="status-card">
-          <h2>Phase 1: Foundation Complete ✅</h2>
-          <p>Worker is running successfully!</p>
+        <ChatWindow roomId="default" />
 
-          <div className="features">
-            <h3>Coming Soon:</h3>
-            <ul>
-              <li>Phase 2: Real-time WebSocket chat</li>
-              <li>Phase 3: AI integration with streaming</li>
-              <li>Phase 4: Vectorize knowledge base</li>
-              <li>Phase 5: AutoRAG semantic search</li>
-            </ul>
-          </div>
+        <div className="info-card">
+          <h3>✅ Phase 2: WebSocket Chat Complete</h3>
+          <ul>
+            <li>Real-time messaging with message persistence</li>
+            <li>Conversation history saved to Durable Objects SQL</li>
+            <li>Echo responses (AI integration coming in Phase 3)</li>
+          </ul>
 
-          <div className="endpoints">
-            <h3>Test Endpoints:</h3>
-            <ul>
-              <li><a href="/health">/health</a> - Health check</li>
-              <li><a href="/api/status">/api/status</a> - Service status</li>
-            </ul>
-          </div>
+          <h3>📋 Test Endpoints:</h3>
+          <ul>
+            <li><a href="/health" target="_blank">/health</a> - Health check</li>
+            <li><a href="/api/status" target="_blank">/api/status</a> - Service status</li>
+          </ul>
         </div>
       </main>
 
