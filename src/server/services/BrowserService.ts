@@ -4,7 +4,7 @@
  * Phase 7: Advanced Features
  */
 
-import { Puppeteer } from '@cloudflare/puppeteer';
+import puppeteer from '@cloudflare/puppeteer';
 
 export interface CrawlOptions {
   waitFor?: string; // CSS selector to wait for
@@ -44,7 +44,7 @@ export class BrowserService {
 
     try {
       // Launch browser session
-      const browserInstance = await Puppeteer.launch(this.browser);
+      const browserInstance = await puppeteer.launch(this.browser);
       const page = await browserInstance.newPage();
 
       // Set user agent if provided
@@ -135,7 +135,7 @@ export class BrowserService {
     openGraph?: Record<string, string>;
     meta?: Record<string, string>;
   }> {
-    const browserInstance = await Puppeteer.launch(this.browser);
+    const browserInstance = await puppeteer.launch(this.browser);
     const page = await browserInstance.newPage();
 
     await page.goto(url, { waitUntil: 'networkidle2' });
@@ -194,7 +194,7 @@ export class BrowserService {
     error?: string;
   }> {
     try {
-      const browserInstance = await Puppeteer.launch(this.browser);
+      const browserInstance = await puppeteer.launch(this.browser);
       const page = await browserInstance.newPage();
 
       const response = await page.goto(url, {
@@ -227,7 +227,7 @@ export class BrowserService {
     image?: string;
     favicon?: string;
   }> {
-    const browserInstance = await Puppeteer.launch(this.browser);
+    const browserInstance = await puppeteer.launch(this.browser);
     const page = await browserInstance.newPage();
 
     await page.goto(url, { waitUntil: 'networkidle2', timeout: 15000 });

@@ -9,7 +9,7 @@ export { AIChatRoom } from './durable-objects/AIChatRoom';
 export { UserSession } from './durable-objects/UserSession';
 
 import { VectorizeService } from './services/VectorizeService';
-import { seedVectorize } from '../scripts/seed-vectorize';
+import { seedVectorize } from '../../scripts/seed-vectorize';
 
 /**
  * Main worker entry point
