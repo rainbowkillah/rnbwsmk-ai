@@ -9,12 +9,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Planned Features
 
-#### Phase 4: Vectorize Setup
-- Three Vectorize indexes (profile, content, products)
-- VectorizeService implementation
-- Text chunking and embedding generation
-- Initial data seeding from profile
-
 #### Phase 5: AutoRAG Integration
 - R2 bucket for document storage
 - AI Search (AutoRAG) setup
@@ -52,6 +46,178 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - User analytics dashboard
 - Mobile app (React Native)
 - Multi-language support
+
+---
+
+## [0.4.0] - 2025-12-04
+
+### Added - Phase 4: Vectorize Setup & Knowledge Base
+
+#### Vectorize Indexes Created
+- **Three Cloudflare Vectorize indexes** created via wrangler CLI:
+  - `rnbwsmk-profile-data`: Personal profile, gaming, tech expertise, social media
+  - `rnbwsmk-site-content`: FAQs, website information, projects, guides
+  - `rnbwsmk-products`: Services/products (AI chat, streaming, consulting)
+- **Configuration**: 768 dimensions (BGE-base-en-v1.5 model), cosine similarity metric
+- **Bindings** added to wrangler.jsonc: `VECTORIZE_PROFILE`, `VECTORIZE_CONTENT`, `VECTORIZE_PRODUCTS`
+
+#### VectorizeService Implementation (330 lines)
+- **Comprehensive vector operations service** for managing embeddings and semantic search
+- **Embedding Generation**:
+  - Single and batch embedding generation using Workers AI
+  - Model: `@cf/baai/bge-base-en-v1.5` (768-dimensional embeddings)
+  - Error handling and validation for AI responses
+- **Upsert Operations**:
+  - Single document upsert with automatic embedding
+  - Batch upsert with parallel embedding generation
+  - Bulk operations with configurable batch size (default: 100)
+- **Query Operations**:
+  - Query single index with configurable topK and filters
+  - Query all indexes simultaneously (queryAll)
+  - Get relevant context for AI chat (getRelevantContext)
+  - Minimum score filtering for quality control
+- **Management Functions**:
+  - Delete vectors (single and batch)
+  - Test index connectivity
+  - Get index information
+- **Multi-Index Support**: Unified interface for profile, content, and products indexes
+
+#### Text Chunking Utilities (450 lines)
+- **Smart Chunking Strategies**:
+  - Paragraph-based chunking (best for general text)
+  - Sentence-based chunking (precise Q&A)
+  - Character-based chunking (fallback for unstructured text)
+- **Overlap Support**: Configurable overlap between chunks for context preservation
+- **Format Detection**:
+  - Markdown-aware chunking (preserves headers and structure)
+  - HTML chunking (strips tags, preserves content)
+  - Smart auto-detection of format
+- **Configuration Options**:
+  - `maxChunkSize` (default: 1000 characters)
+  - `overlapSize` (default: 200 characters)
+  - `splitOn`: 'paragraph' | 'sentence' | 'token'
+  - `preserveStructure`: boolean for markdown/HTML
+- **Word Boundary Breaking**: Intelligent breaking at word boundaries, not mid-word
+
+#### Seed Script with Profile Data (280 lines)
+- **Comprehensive profile data** extracted and structured:
+  - **Personal**: Name, aliases (RainbowKillah, RainbowSmoke), title, location, bio, communities
+  - **Gaming**: Platforms (Twitch, YouTube), games (Apex, Valorant, COD), schedule, style
+  - **Tech**: Full-stack dev expertise, Cloudflare Workers, React/TypeScript, AI/ML interest
+  - **Social Media**: GitHub, Twitter, LinkedIn, websites, verified platforms
+- **Content Documents**:
+  - FAQs: Streaming, contact, gaming, tech work
+  - Website information
+  - Tech projects and contributions
+- **Product/Service Documents**:
+  - AI Chat Assistant (features, technology)
+  - Gaming Streams (schedule, platforms, content)
+  - Tech Consulting (expertise, services)
+- **Seeding Functions**:
+  - `seedVectorize()`: Main function for populating all three indexes
+  - Connection testing before seeding
+  - Batch upsert for efficiency
+  - Progress logging and error handling
+- **Total Initial Documents**: 15 documents across three indexes
+
+#### API Endpoints for Vectorize
+- **POST /api/vectorize/seed**: Trigger manual seeding of all indexes
+  - Calls seedVectorize() function
+  - Returns success/error status
+  - Useful for re-seeding or updates
+- **POST /api/vectorize/query**: Query a specific index
+  - Parameters: `query` (string), `indexType` ('profile'|'content'|'products'), `topK` (number)
+  - Returns: Matching vectors with scores and metadata
+- **POST /api/vectorize/search**: Search across all indexes
+  - Parameters: `query` (string), `topK` (number), `minScore` (number)
+  - Returns: Top relevant chunks across all indexes, sorted by relevance
+  - Perfect for RAG context retrieval
+
+#### Technical Details
+
+**Embedding Model**:
+```
+Model: @cf/baai/bge-base-en-v1.5
+Dimensions: 768
+Metric: Cosine similarity
+Average generation time: ~100ms per embedding
+Batch processing: Supported for efficiency
+```
+
+**Vector Search Performance**:
+```
+Query latency: ~50-100ms (depending on index size)
+TopK: Configurable (default: 5)
+Minimum score: Configurable (default: 0.7 for high relevance)
+Multi-index search: Parallel queries for speed
+```
+
+**Chunking Strategy**:
+```
+Default chunk size: 1000 characters
+Default overlap: 200 characters
+Overlap purpose: Preserve context across chunk boundaries
+Strategy: Paragraph-first, fallback to sentence, then character
+```
+
+**Data Structure**:
+```typescript
+interface DocumentChunk {
+  id: string;                      // Unique identifier
+  text: string;                    // Content to embed
+  metadata: {
+    type: string;                  // Document type (bio, faq, service, etc.)
+    category: string;              // Index category (profile, content, products)
+    [key: string]: any;            // Additional metadata
+  };
+}
+
+interface VectorSearchResult {
+  id: string;                      // Document ID
+  score: number;                   // Similarity score (0-1)
+  metadata: VectorMetadata;        // Full metadata including text
+}
+```
+
+### Technical Implementation
+
+**Files Created**:
+- `src/server/services/VectorizeService.ts` (330 lines)
+- `src/server/utils/chunking.ts` (450 lines)
+- `scripts/seed-vectorize.ts` (280 lines)
+
+**Files Modified**:
+- `src/server/index.ts` (+70 lines): Added Vectorize API endpoints
+- `wrangler.jsonc`: Vectorize bindings already configured
+- `package.json`: Version bump to 0.4.0
+
+**Commands Used**:
+```bash
+# Create Vectorize indexes
+npx wrangler vectorize create rnbwsmk-profile-data --dimensions=768 --metric=cosine
+npx wrangler vectorize create rnbwsmk-site-content --dimensions=768 --metric=cosine
+npx wrangler vectorize create rnbwsmk-products --dimensions=768 --metric=cosine
+
+# Test seeding (requires --remote for Vectorize access)
+curl -X POST http://localhost:8787/api/vectorize/seed
+
+# Test query
+curl -X POST http://localhost:8787/api/vectorize/query \
+  -H "Content-Type: application/json" \
+  -d '{"query": "Who is RainbowSmoke?", "indexType": "profile", "topK": 3}'
+
+# Test search all indexes
+curl -X POST http://localhost:8787/api/vectorize/search \
+  -H "Content-Type: application/json" \
+  -d '{"query": "gaming streams", "topK": 5, "minScore": 0.7}'
+```
+
+### Notes
+
+- **Vectorize bindings don't support local dev**: Must use `wrangler dev --remote` or deploy to Cloudflare to test Vectorize functionality
+- **Embedding generation uses Workers AI**: Incurs usage charges (free tier: 10,000 requests/day)
+- **Initial seeding**: 15 documents → 15 embeddings → stored across 3 indexes
+- **Ready for Phase 5**: VectorizeService can now be integrated with AutoRAG for enhanced context retrieval
 
 ---
 

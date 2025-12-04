@@ -8,6 +8,9 @@
 export { AIChatRoom } from './durable-objects/AIChatRoom';
 export { UserSession } from './durable-objects/UserSession';
 
+import { VectorizeService } from './services/VectorizeService';
+import { seedVectorize } from '../scripts/seed-vectorize';
+
 /**
  * Main worker entry point
  * Handles routing for HTTP and WebSocket connections
@@ -33,7 +36,7 @@ export default {
       return Response.json({
         status: 'healthy',
         timestamp: new Date().toISOString(),
-        version: '0.1.0'
+        version: '0.4.0'
       });
     }
 
@@ -41,7 +44,7 @@ export default {
     if (path === '/api/status') {
       return Response.json({
         service: 'rnbwsmk-ai',
-        version: '0.1.0',
+        version: '0.4.0',
         features: {
           chat: 'enabled',
           vectorize: 'enabled',
@@ -64,13 +67,88 @@ export default {
       return durableObject.fetch(request);
     }
 
-    // API routes (will be implemented in phases)
+    // Vectorize seeding endpoint (Phase 4)
+    if (path === '/api/vectorize/seed' && request.method === 'POST') {
+      try {
+        await seedVectorize(env);
+        return Response.json({
+          success: true,
+          message: 'Vectorize indexes seeded successfully'
+        });
+      } catch (error) {
+        return Response.json({
+          success: false,
+          error: (error as Error).message
+        }, { status: 500 });
+      }
+    }
+
+    // Vectorize query endpoint (Phase 4)
+    if (path === '/api/vectorize/query' && request.method === 'POST') {
+      try {
+        const { query, indexType = 'profile', topK = 5 } = await request.json() as any;
+
+        const vectorService = new VectorizeService(
+          env.AI,
+          env.VECTORIZE_PROFILE,
+          env.VECTORIZE_CONTENT,
+          env.VECTORIZE_PRODUCTS,
+          env.EMBEDDING_MODEL
+        );
+
+        const results = await vectorService.query(indexType, query, { topK });
+
+        return Response.json({
+          success: true,
+          query,
+          indexType,
+          results
+        });
+      } catch (error) {
+        return Response.json({
+          success: false,
+          error: (error as Error).message
+        }, { status: 500 });
+      }
+    }
+
+    // Vectorize search all indexes (Phase 4)
+    if (path === '/api/vectorize/search' && request.method === 'POST') {
+      try {
+        const { query, topK = 5, minScore = 0.7 } = await request.json() as any;
+
+        const vectorService = new VectorizeService(
+          env.AI,
+          env.VECTORIZE_PROFILE,
+          env.VECTORIZE_CONTENT,
+          env.VECTORIZE_PRODUCTS,
+          env.EMBEDDING_MODEL
+        );
+
+        const context = await vectorService.getRelevantContext(query, {
+          maxChunks: topK,
+          minScore
+        });
+
+        return Response.json({
+          success: true,
+          query,
+          context
+        });
+      } catch (error) {
+        return Response.json({
+          success: false,
+          error: (error as Error).message
+        }, { status: 500 });
+      }
+    }
+
+    // Other API routes (will be implemented in future phases)
     if (path.startsWith('/api/')) {
-      // TODO: Implement API handlers in Phase 3+
       return Response.json({
         error: 'Not implemented yet',
         path,
-        phase: 'Coming in Phase 3+'
+        phase: 'Coming in Phase 5+'
       }, { status: 501 });
     }
 
