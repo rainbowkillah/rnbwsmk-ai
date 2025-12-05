@@ -31,6 +31,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.9.0-rc] - 2025-12-05
+
+### Added - Phase 9: Deployment (Release Candidate)
+
+- **Release candidate artifacts**: bumped npm metadata to `0.9.0-rc`, ran `npm run build:client`, and archived the ES2022 client bundle under `public/dist` for CI to upload without rebuild drift.
+- **CI alignment**: both Workers now include explicit `account_id` entries in their `wrangler.jsonc`, ensuring GitHub Actions/Cloudflare CI deploy the production account (`7fde695caf9cc41efca391316eb71003`).
+- **Env parity docs**: mirrored every key from `.dev.vars` into `.dev.vars.example` and documented which secrets must be promoted via `wrangler secret put` before promoting the RC to GA.
+
+### Testing
+
+- `npm run build:client` (client bundle) – validates esbuild outputs for the RC tag.
+
+---
+
 ## [0.8.0] - 2025-12-05
 
 ### Added - Phase 8: Polish & Optimization (Part 1)

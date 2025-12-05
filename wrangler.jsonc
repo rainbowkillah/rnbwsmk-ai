@@ -1,6 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "rnbwsmk-ai",
+  "account_id": "7fde695caf9cc41efca391316eb71003",
   "main": "src/server/index.ts",
   "compatibility_date": "2025-12-04",
   "compatibility_flags": [
