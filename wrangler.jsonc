@@ -78,7 +78,7 @@
 
   // Environment variables (non-secret)
   "vars": {
-    "AI_GATEWAY_ID": "rnbwsmk-ai-gateway",
+    "AI_GATEWAY_ID": "ai-gateway",
     "AI_SEARCH_NAME": "rnbwsmk-search",
     "DEFAULT_MODEL": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
     "PREMIUM_MODEL": "openai/gpt-4o",
