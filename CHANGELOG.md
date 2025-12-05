@@ -341,7 +341,7 @@ Phase 7 complete! Advanced features implemented. Ready for Phase 8: Polish & Opt
 ```html
 <!-- Auto-initialize -->
 <div data-ai-widget
-     data-worker-url="https://rnbwsmk-ai.rainbowsmokeofficial.workers.dev"
+     data-worker-url="https://rnbwsmk-ai.64zgd764sm.workers.dev"
      data-position="bottom-right">
 </div>
 <script src="/js/ai-widget.js"></script>
@@ -349,7 +349,7 @@ Phase 7 complete! Advanced features implemented. Ready for Phase 8: Polish & Opt
 <!-- Manual initialization -->
 <script>
   window.aiWidget = new AIWidget({
-    workerUrl: 'https://rnbwsmk-ai.rainbowsmokeofficial.workers.dev',
+    workerUrl: 'https://rnbwsmk-ai.64zgd764sm.workers.dev',
     position: 'bottom-right',
     openOnLoad: false,
     theme: 'rainbow'
@@ -407,7 +407,7 @@ User → rainbowsmokeofficial.com
       ↓
       User clicks chat → Widget opens
       ↓
-      Iframe loads: rnbwsmk-ai.rainbowsmokeofficial.workers.dev
+      Iframe loads: rnbwsmk-ai.64zgd764sm.workers.dev
       ↓
       User sends message → WebSocket → AIChatRoom
       ↓
