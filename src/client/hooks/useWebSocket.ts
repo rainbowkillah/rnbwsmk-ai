@@ -1,10 +1,9 @@
 /**
  * useWebSocket Hook
- * Manages WebSocket connection with PartySocket
+ * Manages WebSocket connection with auto-reconnect logic
  */
 
 import { useEffect, useRef, useState, useCallback } from 'react';
-import PartySocket from 'partysocket';
 import type { WSMessageType } from '../../shared/types';
 
 interface UseWebSocketOptions {
@@ -16,7 +15,7 @@ interface UseWebSocketOptions {
 type ConnectionState = 'connecting' | 'open' | 'closed' | 'error';
 
 export function useWebSocket({ roomId, onMessage, onConnectionChange }: UseWebSocketOptions) {
-  const socketRef = useRef<PartySocket | null>(null);
+  const socketRef = useRef<WebSocket | null>(null);
   const [connectionState, setConnectionState] = useState<ConnectionState>('connecting');
 
   const sendMessage = useCallback((message: WSMessageType) => {
@@ -28,56 +27,65 @@ export function useWebSocket({ roomId, onMessage, onConnectionChange }: UseWebSo
   }, []);
 
   useEffect(() => {
-    // Determine WebSocket URL based on environment
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const host = window.location.host;
+    const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+    const url = `${protocol}://${window.location.host}/party/chat/${encodeURIComponent(roomId)}`;
 
-    // Create PartySocket connection
-    const socket = new PartySocket({
-      host,
-      room: roomId,
-      path: '/party/chat',
-      protocol
-    });
+    let retryAttempts = 0;
+    let reconnectTimer: number | null = null;
+    let isUnmounted = false;
 
-    socketRef.current = socket;
+    const connect = () => {
+      setConnectionState('connecting');
+      const socket = new WebSocket(url);
+      socketRef.current = socket;
 
-    // Connection opened
-    socket.addEventListener('open', () => {
-      console.log('WebSocket connected');
-      setConnectionState('open');
-      onConnectionChange?.(true);
-    });
+      socket.addEventListener('open', () => {
+        if (isUnmounted) return;
+        retryAttempts = 0;
+        console.log('WebSocket connected');
+        setConnectionState('open');
+        onConnectionChange?.(true);
+      });
 
-    // Handle incoming messages
-    socket.addEventListener('message', (event) => {
-      try {
-        const data = JSON.parse(event.data) as WSMessageType;
-        onMessage?.(data);
-      } catch (error) {
-        console.error('Failed to parse WebSocket message:', error);
-      }
-    });
+      socket.addEventListener('message', (event) => {
+        try {
+          const data = JSON.parse(event.data) as WSMessageType;
+          onMessage?.(data);
+        } catch (error) {
+          console.error('Failed to parse WebSocket message:', error);
+        }
+      });
 
-    // Connection closed
-    socket.addEventListener('close', () => {
-      console.log('WebSocket disconnected');
-      setConnectionState('closed');
-      onConnectionChange?.(false);
-    });
+      socket.addEventListener('close', () => {
+        if (isUnmounted) return;
+        console.log('WebSocket disconnected');
+        setConnectionState('closed');
+        onConnectionChange?.(false);
 
-    // Connection error
-    socket.addEventListener('error', (error) => {
-      console.error('WebSocket error:', error);
-      setConnectionState('error');
-      onConnectionChange?.(false);
-    });
+        retryAttempts = Math.min(retryAttempts + 1, 5);
+        const delay = Math.min(1000 * 2 ** retryAttempts, 10000);
+        reconnectTimer = window.setTimeout(connect, delay);
+      });
 
-    // Cleanup on unmount
-    return () => {
-      if (socket.readyState === WebSocket.OPEN) {
+      socket.addEventListener('error', (error) => {
+        console.error('WebSocket error:', error);
+        setConnectionState('error');
+        onConnectionChange?.(false);
         socket.close();
+      });
+    };
+
+    connect();
+
+    return () => {
+      isUnmounted = true;
+      if (reconnectTimer) {
+        clearTimeout(reconnectTimer);
       }
+      if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+        socketRef.current.close();
+      }
+      socketRef.current = null;
     };
   }, [roomId, onMessage, onConnectionChange]);
 
