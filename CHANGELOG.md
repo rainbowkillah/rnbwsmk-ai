@@ -31,6 +31,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.8.0] - 2025-12-05
+
+### Added - Phase 8: Polish & Optimization (Part 1)
+
+- **RateLimitService** (`src/server/services/RateLimitService.ts`)
+  - Shared limiter for Durable Objects + HTTP APIs with optional penalty windows
+  - Vitest coverage in `src/server/services/__tests__/RateLimitService.test.ts`
+- **Realtime protections**: chat + calendar channels now emit actionable rate-limit errors and prevent floods
+- **HTTP safeguards**: `/api/search`, `/api/recommendations`, `/api/vectorize/*`, `/api/crawl` now return consistent `429` responses with `Retry-After`
+- **Vectorize caching**: memoized query/context lookups with TTL + lightweight LRU eviction
+- **AI Gateway cache keys**: deterministic SHA-256 header boosts AI Gateway caching hit-rate
+- **Chat UX polish**: connection spinner, offline banner, reconnect CTA, refined error styling
+- **Build optimization**: esbuild bundles are minified + sourcemapped targeting ES2022
+
+### Fixed
+
+- Unified JSON structure for API rate-limit errors to simplify client handling
+- Reduced duplicate Vectorize embeddings, improving response latency on repeated prompts
+
+### Testing
+
+- Added Vitest coverage for RateLimitService (window reset + penalty scenarios)
+- `npm run test` validates new infrastructure before deploy
+
+---
+
 ## [0.7.0] - 2025-12-04
 
 ### Added - Phase 7: Advanced Features (Calendar, Search, Browser Rendering)

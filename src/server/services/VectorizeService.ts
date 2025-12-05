@@ -27,6 +27,31 @@ export interface DocumentChunk {
 
 export type IndexType = 'profile' | 'content' | 'products';
 
+interface VectorCacheEntry<T> {
+  data: T;
+  expiresAt: number;
+}
+
+type VectorCacheGlobal = typeof globalThis & {
+  __RNBWSMK_VECTOR_CACHE__?: Map<string, VectorCacheEntry<any>>;
+};
+
+const getVectorCache = () => {
+  const target = globalThis as VectorCacheGlobal;
+  if (!target.__RNBWSMK_VECTOR_CACHE__) {
+    target.__RNBWSMK_VECTOR_CACHE__ = new Map();
+  }
+  return target.__RNBWSMK_VECTOR_CACHE__;
+};
+
+const vectorCache = getVectorCache();
+
+interface VectorizeServiceOptions {
+  enableCache?: boolean;
+  cacheTtlMs?: number;
+  maxCacheEntries?: number;
+}
+
 /**
  * VectorizeService manages vector operations across multiple indexes
  */
@@ -38,13 +63,18 @@ export class VectorizeService {
     products: VectorizeIndex;
   };
   private embeddingModel: string;
+  private cache: Map<string, VectorCacheEntry<any>>;
+  private cacheEnabled: boolean;
+  private cacheTtlMs: number;
+  private maxCacheEntries: number;
 
   constructor(
     ai: Ai,
     profileIndex: VectorizeIndex,
     contentIndex: VectorizeIndex,
     productsIndex: VectorizeIndex,
-    embeddingModel: string = '@cf/baai/bge-base-en-v1.5'
+    embeddingModel: string = '@cf/baai/bge-base-en-v1.5',
+    options: VectorizeServiceOptions = {}
   ) {
     this.ai = ai;
     this.indexes = {
@@ -53,6 +83,10 @@ export class VectorizeService {
       products: productsIndex
     };
     this.embeddingModel = embeddingModel;
+    this.cache = vectorCache;
+    this.cacheEnabled = options.enableCache ?? true;
+    this.cacheTtlMs = options.cacheTtlMs ?? 45_000;
+    this.maxCacheEntries = options.maxCacheEntries ?? 256;
   }
 
   /**
@@ -168,6 +202,19 @@ export class VectorizeService {
       minScore = 0.0
     } = options;
 
+    const cacheKey = this.buildCacheKey('query', [
+      indexType,
+      queryText,
+      String(topK),
+      String(minScore),
+      filter ? this.stableSerialize(filter) : ''
+    ]);
+
+    const cached = this.getCached<VectorSearchResult[]>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
     // Generate embedding for query
     const queryEmbedding = await this.generateEmbedding(queryText);
 
@@ -179,13 +226,16 @@ export class VectorizeService {
     });
 
     // Transform and filter results
-    return results.matches
+    const transformed = results.matches
       .filter(match => match.score >= minScore)
       .map(match => ({
         id: match.id,
         score: match.score,
         metadata: match.metadata as VectorMetadata
       }));
+
+    this.setCached(cacheKey, transformed);
+    return transformed;
   }
 
   /**
@@ -235,6 +285,12 @@ export class VectorizeService {
       minScore = 0.7
     } = options;
 
+    const cacheKey = this.buildCacheKey('context', [query, String(maxChunks), String(minScore)]);
+    const cached = this.getCached<VectorSearchResult[]>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
     // Query all indexes
     const allResults = await this.queryAll(query, {
       topK: maxChunks,
@@ -249,7 +305,9 @@ export class VectorizeService {
     ].sort((a, b) => b.score - a.score);
 
     // Return top results
-    return flatResults.slice(0, maxChunks);
+    const topResults = flatResults.slice(0, maxChunks);
+    this.setCached(cacheKey, topResults);
+    return topResults;
   }
 
   /**
@@ -326,5 +384,56 @@ export class VectorizeService {
     }
 
     return { success, failed };
+  }
+
+  private buildCacheKey(kind: string, parts: Array<string | number>): string {
+    return `${kind}:${parts.join('|')}`;
+  }
+
+  private stableSerialize(value: any): string {
+    if (value === null || typeof value !== 'object') {
+      return JSON.stringify(value);
+    }
+
+    if (Array.isArray(value)) {
+      return `[${value.map(item => this.stableSerialize(item)).join(',')}]`;
+    }
+
+    const entries = Object.keys(value)
+      .sort()
+      .map(key => `${JSON.stringify(key)}:${this.stableSerialize(value[key])}`);
+
+    return `{${entries.join(',')}}`;
+  }
+
+  private getCached<T>(key: string): T | null {
+    if (!this.cacheEnabled) return null;
+
+    const entry = this.cache.get(key);
+    if (entry && entry.expiresAt > Date.now()) {
+      return entry.data as T;
+    }
+
+    if (entry) {
+      this.cache.delete(key);
+    }
+
+    return null;
+  }
+
+  private setCached<T>(key: string, data: T): void {
+    if (!this.cacheEnabled) return;
+
+    this.cache.set(key, {
+      data,
+      expiresAt: Date.now() + this.cacheTtlMs
+    });
+
+    if (this.cache.size > this.maxCacheEntries) {
+      const oldestKey = this.cache.keys().next().value;
+      if (oldestKey) {
+        this.cache.delete(oldestKey);
+      }
+    }
   }
 }

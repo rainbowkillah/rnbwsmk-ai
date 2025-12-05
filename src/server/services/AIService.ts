@@ -191,12 +191,19 @@ export class AIService {
     // Construct AI Gateway URL
     const gatewayUrl = `https://gateway.ai.cloudflare.com/v1/${this.gatewayId}/${provider}/chat/completions`;
 
+    const cacheKey = await this.buildGatewayCacheKey(model, messages);
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'cf-aig-cache-ttl': String(options.gateway?.cacheTtl ?? 3600)
+    };
+
+    if (cacheKey) {
+      headers['cf-aig-cache-key'] = cacheKey;
+    }
+
     const response = await fetch(gatewayUrl, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'cf-aig-cache-ttl': String(options.gateway?.cacheTtl ?? 3600)
-      },
+      headers,
       body: JSON.stringify({
         model: actualModel,
         messages,
@@ -352,5 +359,22 @@ export class AIService {
       free: this.MODEL_TIERS.free,
       premium: this.MODEL_TIERS.premium
     };
+  }
+
+  private async buildGatewayCacheKey(
+    model: string,
+    messages: Array<{ role: string; content: string }>
+  ): Promise<string> {
+    try {
+      const payload = JSON.stringify({ model, messages });
+      const encoder = new TextEncoder();
+      const digest = await crypto.subtle.digest('SHA-256', encoder.encode(payload));
+      return Array.from(new Uint8Array(digest))
+        .map(byte => byte.toString(16).padStart(2, '0'))
+        .join('');
+    } catch (error) {
+      console.warn('Failed to build AI Gateway cache key:', error);
+      return '';
+    }
   }
 }

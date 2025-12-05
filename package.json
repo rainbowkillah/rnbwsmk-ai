@@ -1,11 +1,11 @@
 {
   "name": "rnbwsmk-ai",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "AI assistant for rainbowsmokeofficial.com",
   "type": "module",
   "private": true,
   "scripts": {
-    "build:client": "esbuild src/client/index.tsx --bundle --splitting --format=esm --platform=browser --outdir=public/dist --loader:.svg=file --loader:.png=file",
+    "build:client": "esbuild src/client/index.tsx --bundle --splitting --format=esm --platform=browser --target=es2022 --jsx=automatic --minify --sourcemap --outdir=public/dist --loader:.svg=file --loader:.png=file",
     "cf-typegen": "wrangler types ./src/server/worker-configuration.d.ts",
     "check": "tsc --noEmit && wrangler deploy --dry-run",
     "dev": "wrangler dev",

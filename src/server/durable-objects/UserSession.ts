@@ -7,6 +7,7 @@
 
 import { Server } from 'partyserver';
 import { CalendarService, type CalendarEvent, type CreateEventInput, type UpdateEventInput, type EventQuery } from '../services/CalendarService';
+import { RateLimitService } from '../services/RateLimitService';
 
 type WSMessage =
   | { type: 'calendar.create'; event: CreateEventInput }
@@ -19,6 +20,7 @@ type WSMessage =
 
 export class UserSession extends Server<Env> {
   private calendarService: CalendarService | null = null;
+  private rateLimiter: RateLimitService | null = null;
 
   static options = {
     hibernate: true
@@ -27,6 +29,7 @@ export class UserSession extends Server<Env> {
   async onStart() {
     // Initialize CalendarService with SQL storage
     this.calendarService = new CalendarService(this.ctx.storage.sql);
+    this.rateLimiter = new RateLimitService(this.ctx.storage);
     console.log('UserSession started with CalendarService');
   }
 
@@ -40,6 +43,26 @@ export class UserSession extends Server<Env> {
       }
 
       const userId = 'default'; // In production, get from authenticated session
+
+      if (!this.rateLimiter) {
+        this.rateLimiter = new RateLimitService(this.ctx.storage);
+      }
+
+      if (this.rateLimiter) {
+        const result = await this.rateLimiter.consume(`calendar:${userId}`, {
+          limit: 60,
+          windowMs: 60_000,
+          blockDurationMs: 10_000
+        });
+
+        if (!result.allowed) {
+          this.broadcast(JSON.stringify({
+            type: 'error',
+            error: `Too many calendar actions. Try again in ${result.retryAfter ?? 5}s.`
+          }));
+          return;
+        }
+      }
 
       switch (data.type) {
         case 'calendar.create':

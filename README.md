@@ -21,6 +21,8 @@ A sophisticated AI assistant combining real-time chat, semantic search, and retr
 - 🧠 **Knowledge Base** - Cloudflare Vectorize for semantic search
 - 🔍 **AI Search (AutoRAG)** - Automatic retrieval-augmented generation
 - 🌐 **AI Gateway** - Unified multi-model orchestration
+- 🛡️ **Adaptive Rate Limiting** - Shared limiter across chat, calendar & HTTP APIs
+- 🗃️ **Smart Caching** - Vectorize memoization + AI Gateway cache keys
 - 📅 **Calendar Assistant** - Scheduling and agenda management
 - 🎨 **Browser Rendering** - Web scraping and screenshots
 - ⚡ **Edge Computing** - Global deployment on Cloudflare's network

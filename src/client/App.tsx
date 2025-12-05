@@ -20,6 +20,13 @@ export default function App() {
         <ChatWindow roomId="default" />
 
         <div className="info-card">
+          <h3>⚙️ Phase 8: Polish & Optimization</h3>
+          <ul>
+            <li>Adaptive rate limiting across chat, calendar, and HTTP APIs</li>
+            <li>Vectorize memoization + AI Gateway cache keys for faster replies</li>
+            <li>Enhanced chat UX with loading states and reconnect flows</li>
+          </ul>
+
           <h3>✅ Phase 7: Advanced Features Complete</h3>
           <ul>
             <li>Calendar scheduling with event management (WebSocket API)</li>

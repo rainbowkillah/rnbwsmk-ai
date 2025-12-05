@@ -91,6 +91,10 @@ export default function ChatWindow({ roomId = 'default' }: ChatWindowProps) {
     });
   };
 
+  const handleReconnect = () => {
+    window.location.reload();
+  };
+
   return (
     <div className="chat-window">
       <div className="chat-header">
@@ -105,6 +109,30 @@ export default function ChatWindow({ roomId = 'default' }: ChatWindowProps) {
           </span>
         </div>
       </div>
+
+      {connectionState === 'connecting' && (
+        <div className="chat-loading" role="status">
+          <span className="chat-spinner" aria-hidden="true" />
+          <span>Connecting to RainbowSmoke AI…</span>
+        </div>
+      )}
+
+      {connectionState === 'error' && (
+        <div className="chat-error persistent">
+          <span className="error-icon">⚠️</span>
+          Connection lost. Please retry.
+          <button className="retry-button" onClick={handleReconnect}>
+            Reconnect
+          </button>
+        </div>
+      )}
+
+      {connectionState === 'closed' && (
+        <div className="chat-info-banner">
+          <span role="img" aria-hidden="true">📡</span>
+          You are offline. Messages will resume once the connection is restored.
+        </div>
+      )}
 
       {error && (
         <div className="chat-error">

@@ -10,6 +10,7 @@ import { nanoid } from 'nanoid';
 import { AIService } from '../services/AIService';
 import { VectorizeService } from '../services/VectorizeService';
 import { RAGService } from '../services/RAGService';
+import { RateLimitService } from '../services/RateLimitService';
 import type { ChatMessage, WSMessageType } from '../../shared/types';
 
 interface WebSocketSession {
@@ -25,6 +26,7 @@ export class AIChatRoom implements DurableObject {
   private aiService: AIService;
   private vectorService: VectorizeService;
   private ragService: RAGService;
+  private rateLimiter: RateLimitService;
 
   constructor(state: DurableObjectState, env: Env) {
     this.state = state;
@@ -45,6 +47,7 @@ export class AIChatRoom implements DurableObject {
 
     // Initialize RAG service
     this.ragService = new RAGService(this.vectorService, this.aiService);
+    this.rateLimiter = new RateLimitService(this.state.storage);
 
     // Block all CORS requests for now (we'll enable later for production)
     this.state.blockConcurrencyWhile(async () => {
@@ -251,6 +254,35 @@ export class AIChatRoom implements DurableObject {
     const conversationId = this.state.id.toString();
     const messageId = data.id || nanoid();
     const now = Date.now();
+
+    // Rate limiting per connection
+    const sessionLimit = await this.rateLimiter.consume(`chat:${session.connectionId}`, {
+      limit: 30,
+      windowMs: 60_000,
+      blockDurationMs: 15_000
+    });
+
+    if (!sessionLimit.allowed) {
+      session.webSocket.send(JSON.stringify({
+        type: 'error',
+        error: `Too many messages. Try again in ${sessionLimit.retryAfter ?? 10}s.`
+      } satisfies WSMessageType));
+      return;
+    }
+
+    const roomLimit = await this.rateLimiter.consume(`chat-room:${conversationId}`, {
+      limit: 150,
+      windowMs: 60_000,
+      blockDurationMs: 10_000
+    });
+
+    if (!roomLimit.allowed) {
+      session.webSocket.send(JSON.stringify({
+        type: 'error',
+        error: 'Chat is busy right now. Please wait a few seconds.'
+      } satisfies WSMessageType));
+      return;
+    }
 
     // Create user message
     const userMessage: ChatMessage = {

@@ -10,6 +10,9 @@ export { UserSession } from './durable-objects/UserSession';
 
 import { VectorizeService } from './services/VectorizeService';
 import { seedVectorize } from '../../scripts/seed-vectorize';
+import { RateLimitService } from './services/RateLimitService';
+
+const httpRateLimiter = new RateLimitService();
 
 /**
  * Main worker entry point
@@ -69,6 +72,8 @@ export default {
 
     // Vectorize seeding endpoint (Phase 4)
     if (path === '/api/vectorize/seed' && request.method === 'POST') {
+      const rateLimited = await enforceHttpRateLimit(request, 'vectorize-seed', 2, 3600_000);
+      if (rateLimited) return rateLimited;
       try {
         await seedVectorize(env);
         return Response.json({
@@ -85,6 +90,8 @@ export default {
 
     // Vectorize query endpoint (Phase 4)
     if (path === '/api/vectorize/query' && request.method === 'POST') {
+      const rateLimited = await enforceHttpRateLimit(request, 'vectorize-query', 60, 60_000);
+      if (rateLimited) return rateLimited;
       try {
         const { query, indexType = 'profile', topK = 5 } = await request.json() as any;
 
@@ -114,6 +121,8 @@ export default {
 
     // Vectorize search all indexes (Phase 4)
     if (path === '/api/vectorize/search' && request.method === 'POST') {
+      const rateLimited = await enforceHttpRateLimit(request, 'vectorize-search', 60, 60_000);
+      if (rateLimited) return rateLimited;
       try {
         const { query, topK = 5, minScore = 0.7 } = await request.json() as any;
 
@@ -153,6 +162,8 @@ export default {
 
     // Search API (Phase 7)
     if (path === '/api/search' && request.method === 'POST') {
+      const rateLimited = await enforceHttpRateLimit(request, 'search', 45, 60_000);
+      if (rateLimited) return rateLimited;
       try {
         const { SearchService } = await import('./services/SearchService');
         const vectorService = new VectorizeService(
@@ -177,6 +188,8 @@ export default {
 
     // Recommendations API (Phase 7)
     if (path === '/api/recommendations' && request.method === 'POST') {
+      const rateLimited = await enforceHttpRateLimit(request, 'recommendations', 45, 60_000);
+      if (rateLimited) return rateLimited;
       try {
         const { SearchService } = await import('./services/SearchService');
         const vectorService = new VectorizeService(
@@ -205,6 +218,8 @@ export default {
 
     // Browser crawl API (Phase 7)
     if (path === '/api/crawl' && request.method === 'POST') {
+      const rateLimited = await enforceHttpRateLimit(request, 'crawl', 10, 60_000);
+      if (rateLimited) return rateLimited;
       try {
         const { BrowserService } = await import('./services/BrowserService');
         const browserService = new BrowserService(env.BROWSER);
@@ -240,3 +255,46 @@ export default {
     }
   },
 };
+
+async function enforceHttpRateLimit(
+  request: Request,
+  bucket: string,
+  limit: number,
+  windowMs: number
+): Promise<Response | null> {
+  const clientId = getClientIdentifier(request);
+  const rateResult = await httpRateLimiter.consume(`${bucket}:${clientId}`, {
+    limit,
+    windowMs,
+    blockDurationMs: windowMs
+  });
+
+  if (rateResult.allowed) {
+    return null;
+  }
+
+  const retryAfter = rateResult.retryAfter ?? Math.ceil((rateResult.reset - Date.now()) / 1000);
+
+  return Response.json({
+    error: 'Rate limit exceeded',
+    bucket,
+    retryAfter
+  }, {
+    status: 429,
+    headers: {
+      'Retry-After': String(retryAfter)
+    }
+  });
+}
+
+function getClientIdentifier(request: Request): string {
+  const cfConnectingIp = request.headers.get('cf-connecting-ip');
+  if (cfConnectingIp) return cfConnectingIp;
+
+  const forwarded = request.headers.get('x-forwarded-for');
+  if (forwarded) {
+    return forwarded.split(',')[0].trim();
+  }
+
+  return 'anonymous';
+}
