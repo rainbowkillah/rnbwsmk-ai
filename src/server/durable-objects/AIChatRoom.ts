@@ -238,7 +238,7 @@ export class AIChatRoom implements DurableObject {
 
     // WebSocket is already closed when this handler runs; only attempt an
     // explicit close if Cloudflare delivered a valid code we can echo back.
-    if (typeof code === 'number' && code >= 1000 && code !== 1005) {
+    if (typeof code === 'number' && code >= 1000 && code !== 1005 && code !== 1006) {
       try {
         ws.close(code, reason);
       } catch (err) {
