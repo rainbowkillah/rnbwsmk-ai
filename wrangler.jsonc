@@ -20,6 +20,14 @@
     "command": "npm run build:client"
   },
 
+  // Custom domain routing
+  "routes": [
+    {
+      "pattern": "rnbwsmk-ai.rainbowsmokeofficial.com/*",
+      "zone_id": "08799f5ad74531bce78685c902d164ef"
+    }
+  ],
+
   // Durable Objects configuration
   "durable_objects": {
     "bindings": [
